@@ -26,8 +26,8 @@ minikube addons enable ingress
 
 # 2) Image'ı build edip Minikube'e yükle
 cd ..  # proje köküne
-docker build -t k8s-playground:1.0.0 .
-minikube image load k8s-playground:1.0.0
+docker build -t docker.io/cahityusuf/k8s-playground:v1.0.1 .
+minikube image load docker.io/cahityusuf/k8s-playground:v1.0.1
 
 # 3) Manifest'leri uygula
 kubectl apply -f k8s/

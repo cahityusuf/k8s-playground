@@ -41,7 +41,7 @@ spec:
       containers:
       # --- Ana konteyner ---
       - name: web
-        image: k8s-playground:1.0.0   # 'minikube image load' ile yükleyin
+        image: docker.io/cahityusuf/k8s-playground:v1.0.1   # public registry'den çekilir
         imagePullPolicy: IfNotPresent
         ports:
         - { name: http, containerPort: 8080 }
