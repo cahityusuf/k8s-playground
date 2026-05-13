@@ -1,0 +1,55 @@
+@{ ViewData["Title"] = "Pod Info"; }
+
+<h3>Pod / Node Bilgileri</h3>
+<p class="text-muted">Downward API ile manifest'ten gelen değerler. Service'in arkasında birden çok replika varsa, bu sayfayı birkaç kez yenileyerek farklı Pod adlarının döndüğünü gözlemleyin.</p>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">Pod</div>
+            <div class="card-body">
+                <table class="table table-sm kv-table mb-0">
+                    <tr><td>Name</td><td><code>@ViewBag.Pod.Name</code></td></tr>
+                    <tr><td>Namespace</td><td><code>@ViewBag.Pod.Namespace</code></td></tr>
+                    <tr><td>IP</td><td><code>@ViewBag.Pod.Ip</code></td></tr>
+                    <tr><td>Service Account</td><td><code>@ViewBag.Pod.ServiceAcc</code></td></tr>
+                    <tr><td>Node Name</td><td><code>@ViewBag.Pod.NodeName</code></td></tr>
+                    <tr><td>Node IP</td><td><code>@ViewBag.Pod.NodeIp</code></td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-secondary text-white">Uygulama</div>
+            <div class="card-body">
+                <table class="table table-sm kv-table mb-0">
+                    <tr><td>Görünen Ad</td><td>@ViewBag.App.Display</td></tr>
+                    <tr><td>Versiyon</td><td><span class="badge bg-warning text-dark">@ViewBag.App.Version</span></td></tr>
+                    <tr><td>Başlangıç</td><td>@ViewBag.App.Started</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-12">
+        <div class="card shadow-sm">
+            <div class="card-header">Runtime</div>
+            <div class="card-body">
+                <table class="table table-sm kv-table mb-0">
+                    <tr><td>OS</td><td>@ViewBag.Runtime.Os (@ViewBag.Runtime.Arch)</td></tr>
+                    <tr><td>Framework</td><td>@ViewBag.Runtime.Framework</td></tr>
+                    <tr><td>CPU</td><td>@ViewBag.Runtime.Cpus mantıksal çekirdek</td></tr>
+                    <tr><td>Kullanıcı</td><td><code>@ViewBag.Runtime.User</code></td></tr>
+                    <tr><td>Working Set</td><td>@ViewBag.Runtime.WorkingSet MB</td></tr>
+                    <tr><td>ServiceAccount token mount?</td>
+                        <td>@(ViewBag.ServiceAccountTokenMounted ? "Evet" : "Hayır")</td></tr>
+                    <tr><td>Init container işareti</td>
+                        <td>
+                            @if (ViewBag.InitMarker == null) { <em>(yok — init container çalışmamış)</em> }
+                            else { <pre class="code mb-0">@ViewBag.InitMarker</pre> }
+                        </td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,38 @@
+@{ ViewData["Title"] = "Loglar"; }
+
+<h3>Log Üretici</h3>
+<p class="text-muted">
+    Üretilen logları görmek için: <code>kubectl logs -f &lt;pod-adi&gt;</code>.
+    <code>StdErr</code> seçimini kullanırsanız konsol stderr akışına yazılır;
+    <code>kubectl logs</code> her ikisini de gösterir.
+</p>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form asp-action="Emit" method="post" class="row g-2">
+            <div class="col-md-3">
+                <label class="form-label small">Seviye</label>
+                <select name="level" class="form-select">
+                    <option>Trace</option>
+                    <option>Debug</option>
+                    <option selected>Information</option>
+                    <option>Warning</option>
+                    <option>Error</option>
+                    <option>Critical</option>
+                    <option>StdErr</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label small">Mesaj</label>
+                <input class="form-control" name="message" value="Merhaba Kubernetes!"/>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">Adet</label>
+                <input class="form-control" type="number" name="count" value="5" min="1" max="1000"/>
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+                <button class="btn btn-primary w-100">Üret</button>
+            </div>
+        </form>
+    </div>
+</div>

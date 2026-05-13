@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: playground
+  namespace: playground
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: playground.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: playground
+            port: { number: 80 }
+# Minikube için aktivasyon:
+#   minikube addons enable ingress
+#   echo "$(minikube ip)  playground.local" | sudo tee -a /etc/hosts
+#   curl http://playground.local/

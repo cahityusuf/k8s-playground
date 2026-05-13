@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: playground-config
+  namespace: playground
+data:
+  # Env olarak Pod'a aktarılacak değerler
+  APP_MODE: "training"
+  LOG_LEVEL: "Information"
+  FEATURE_FLAG_NEW_UI: "true"
+  GREETING: "Merhaba Kubernetes!"
+  # Volume olarak mount edildiğinde her anahtar bir dosya olur
+  appsettings.Production.json: |
+    {
+      "App": {
+        "DisplayName": "K8s Playground (ConfigMap)",
+        "Note": "Bu dosya ConfigMap'ten geliyor — kubectl edit ile değiştirip yenileyin."
+      }
+    }
+  banner.txt: |
+    ===============================================
+    ConfigMap'ten gelen banner dosyasıdır.
+    Bu dosyayı kubectl edit configmap ile değiştirip
+    /Config sayfasını yenileyerek tazelenmesini gözlemleyin.
+    ===============================================

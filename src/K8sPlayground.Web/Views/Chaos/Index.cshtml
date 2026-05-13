@@ -1,0 +1,48 @@
+@{ ViewData["Title"] = "Chaos"; }
+
+<h3>Hata Enjeksiyonu</h3>
+<p class="text-muted">
+    Kontrollü hata üretici. <strong>Yalnızca eğitim ortamında</strong> kullanın.
+</p>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-secondary text-white">Graceful Exit (SIGTERM benzeri)</div>
+            <div class="card-body">
+                <p class="small text-muted">Uygulamayı düzgün şekilde kapatır. preStop hook ve <code>terminationGracePeriodSeconds</code> demosu için.</p>
+                <form asp-action="GracefulExit" method="post"><button class="btn btn-warning">Graceful Exit</button></form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-danger text-white">Crash (FailFast)</div>
+            <div class="card-body">
+                <p class="small text-muted">Süreç anında öldürülür. Sürekli çağırırsanız Pod <em>CrashLoopBackOff</em>'a düşer.</p>
+                <form asp-action="Crash" method="post"><button class="btn btn-danger">Crash</button></form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header">Unhandled Exception</div>
+            <div class="card-body">
+                <p class="small text-muted">Yakalanmamış exception fırlatır. <code>kubectl logs</code> ile stack trace okuyabilirsiniz.</p>
+                <form asp-action="ThrowUnhandled" method="post"><button class="btn btn-outline-danger">Throw</button></form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header">Hang (probe'u zorla)</div>
+            <div class="card-body">
+                <p class="small text-muted">Belirtilen süre boyunca thread bloke olur. Liveness probe başarısız olunca K8s Pod'u kill eder.</p>
+                <form asp-action="HangFor" method="post" class="row g-2">
+                    <div class="col-6"><input class="form-control" type="number" name="seconds" value="20" min="1" max="120"/></div>
+                    <div class="col-6"><button class="btn btn-outline-warning w-100">Hang</button></div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

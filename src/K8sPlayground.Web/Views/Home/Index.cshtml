@@ -1,0 +1,54 @@
+@{ ViewData["Title"] = "Ana Sayfa"; }
+
+<div class="p-4 bg-white rounded-3 shadow-sm mb-4">
+    <h1 class="display-6 mb-2">Kubernetes Playground</h1>
+    <p class="lead text-muted mb-1">
+        Kubernetes'in temel ve ileri özelliklerini canlı olarak test etmek için tasarlanmış MVC uygulaması.
+    </p>
+    <div class="d-flex gap-3 flex-wrap small text-muted">
+        <span>Pod: <code>@ViewBag.PodName</code></span>
+        <span>Namespace: <code>@ViewBag.Namespace</code></span>
+        <span>Versiyon: <code>@ViewBag.Version</code></span>
+    </div>
+</div>
+
+<div class="row g-3">
+    @{
+        var cards = new[]
+        {
+            ("Info",    "Pod / Node / Versiyon",    "Downward API ile gelen Pod adı, Namespace, Node IP. Service load balancing demosu için en basit sayfa.", "🪪"),
+            ("Env",     "Environment Değişkenleri", "ConfigMap, Secret ve Downward API ile enjekte edilen tüm env'ler — değer ezme testi için.",              "🌳"),
+            ("Config",  "ConfigMap & Secret Dosyaları", "Volume olarak mount edilen ConfigMap/Secret dosyaları. Anlık güncellemeyi gözlemleyin.",             "📁"),
+            ("Health",  "Liveness / Readiness",     "Readiness'i AÇ/KAPA — Pod'un Service endpoint listesinden düşmesini canlı gözlemleyin.",                 "❤️"),
+            ("Stress",  "CPU / Memory Stres",       "HPA, resources.limits, OOMKilled demoları için kontrollü CPU ve bellek yükü üretir.",                    "🔥"),
+            ("Storage", "PVC / Kalıcı Depolama",    "/data dizinine dosya yaz, Pod'u sil/yeniden başlat — kalıcı mı geçici mi test et.",                       "💾"),
+            ("Network", "Network / DNS / Headers",  "Cluster içi DNS sorgusu, service-to-service çağrı, Ingress üzerinden gelen başlıklar.",                   "🌐"),
+            ("Logs",    "Log Üretici",              "Farklı seviyelerde log üret. 'kubectl logs' ve log toplama demoları için.",                              "📝"),
+            ("Chaos",   "Crash / Hang / Exit",      "Süreci öldür (CrashLoopBackOff), exception fırlat, graceful shutdown tetikle.",                          "💣"),
+        };
+    }
+    @foreach (var (ctrl, title, desc, icon) in cards)
+    {
+        <div class="col-md-6 col-lg-4">
+            <a class="text-decoration-none" asp-controller="@ctrl" asp-action="Index">
+                <div class="card card-feature h-100 border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="feature-icon mb-2">@icon</div>
+                        <h5 class="card-title mb-1 text-dark">@title</h5>
+                        <p class="card-text small text-muted mb-0">@desc</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+    }
+</div>
+
+<div class="mt-4 p-3 bg-white rounded-3 shadow-sm">
+    <h6 class="text-muted mb-2">Probe endpoint'leri</h6>
+    <ul class="small mb-0">
+        <li><code>GET /healthz/live</code> — Liveness probe</li>
+        <li><code>GET /healthz/ready</code> — Readiness probe (Health sayfasından toggle)</li>
+        <li><code>GET /healthz/startup</code> — Startup probe</li>
+        <li><code>GET /metrics</code> — Basit Prometheus metrikleri</li>
+    </ul>
+</div>

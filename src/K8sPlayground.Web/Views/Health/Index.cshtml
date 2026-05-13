@@ -1,0 +1,43 @@
+@{ ViewData["Title"] = "Health Probe"; }
+
+<h3>Liveness / Readiness Test</h3>
+<p class="text-muted">
+    Readiness'i <strong>KAPATIN</strong> ve başka terminalde
+    <code>kubectl get endpoints &lt;service&gt;</code> komutuyla bu Pod'un
+    endpoint listesinden düştüğünü gözlemleyin. Tekrar açtığınızda otomatik
+    geri ekleneceğini göreceksiniz.
+</p>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <p>
+            Mevcut readiness durumu:
+            @if ((bool)ViewBag.IsReady)
+            { <span class="status-ok fw-bold">READY ✔</span> }
+            else
+            { <span class="status-bad fw-bold">NOT READY ✘ (Service trafiği kesilmiş olmalı)</span> }
+        </p>
+        <form asp-action="ToggleReady" method="post" class="d-inline">
+            <button class="btn btn-primary">Toggle</button>
+        </form>
+        <form asp-action="SetReady" method="post" class="d-inline">
+            <input type="hidden" name="ready" value="true" />
+            <button class="btn btn-success">Set READY</button>
+        </form>
+        <form asp-action="SetReady" method="post" class="d-inline">
+            <input type="hidden" name="ready" value="false" />
+            <button class="btn btn-danger">Set NOT READY</button>
+        </form>
+    </div>
+</div>
+
+<div class="mt-3 card shadow-sm">
+    <div class="card-header">Probe Endpoint'leri</div>
+    <div class="card-body small">
+        <ul class="mb-0">
+            <li><code>GET /healthz/live</code> &mdash; her zaman 200 (uygulama yaşıyor mu)</li>
+            <li><code>GET /healthz/ready</code> &mdash; readiness AÇIKsa 200, KAPALIYSA 503</li>
+            <li><code>GET /healthz/startup</code> &mdash; başlangıçta 200</li>
+        </ul>
+    </div>
+</div>

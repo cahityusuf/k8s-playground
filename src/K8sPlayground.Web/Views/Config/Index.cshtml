@@ -1,0 +1,48 @@
+@{ ViewData["Title"] = "Config / Secret Dosyaları"; }
+
+<h3>ConfigMap ve Secret Mount'ları</h3>
+<p class="text-muted">
+    ConfigMap ve Secret'lar volume olarak mount edildiğinde her anahtar bir dosya olarak görünür.
+    ConfigMap'i <code>kubectl edit configmap</code> ile güncelleyip bu sayfayı yenileyerek
+    içeriğin (genelde 30–60 sn içinde) otomatik tazelendiğini gözlemleyin.
+</p>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-success text-white">
+                ConfigMap mount: <code class="text-white">@ViewBag.ConfigPath</code>
+            </div>
+            <div class="card-body">
+                @{ var cf = (List<(string Name, string Content, long Size)>)ViewBag.ConfigFiles; }
+                @if (cf.Count == 0) {
+                    <em class="text-muted">(mount yok ya da boş)</em>
+                }
+                @foreach (var f in cf)
+                {
+                    <h6 class="mt-2"><code>@f.Name</code> <span class="text-muted small">(@f.Size B)</span></h6>
+                    <pre class="code">@f.Content</pre>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-warning text-dark">
+                Secret mount: <code>@ViewBag.SecretPath</code>
+                <span class="badge bg-dark ms-2">maskeli</span>
+            </div>
+            <div class="card-body">
+                @{ var sf = (List<(string Name, string Content, long Size)>)ViewBag.SecretFiles; }
+                @if (sf.Count == 0) {
+                    <em class="text-muted">(mount yok ya da boş)</em>
+                }
+                @foreach (var f in sf)
+                {
+                    <h6 class="mt-2"><code>@f.Name</code> <span class="text-muted small">(@f.Size B)</span></h6>
+                    <pre class="code">@f.Content</pre>
+                }
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,56 @@
+@{ ViewData["Title"] = "Stres"; }
+
+<h3>CPU / Memory Stres Testi</h3>
+<p class="text-muted">
+    HPA (Horizontal Pod Autoscaler), <code>resources.limits</code> ve OOMKilled
+    senaryolarını canlı demo etmek için kullanılır.
+</p>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header">CPU Yükü</div>
+            <div class="card-body">
+                <form asp-action="Cpu" method="post" class="row g-2">
+                    <div class="col-6">
+                        <label class="form-label small">Süre (sn)</label>
+                        <input class="form-control" type="number" name="seconds" value="20" min="1" max="120"/>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small">Worker sayısı</label>
+                        <input class="form-control" type="number" name="workers" value="2" min="1" max="16"/>
+                    </div>
+                    <div class="col-12">
+                        <button class="btn btn-danger">CPU yak</button>
+                    </div>
+                </form>
+                <p class="small text-muted mt-2 mb-0">
+                    <code>kubectl top pod</code> ile CPU kullanımını izleyin; HPA varsa replika sayısının arttığını gözlemleyin.
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header">Bellek Yükü <span class="badge bg-light text-dark">Şu an: @ViewBag.MemMb MB ballast / @ViewBag.WorkingSetMb MB working set</span></div>
+            <div class="card-body">
+                <form asp-action="Memory" method="post" class="row g-2">
+                    <div class="col-8">
+                        <label class="form-label small">Ayırılacak MB</label>
+                        <input class="form-control" type="number" name="megabytes" value="100" min="1" max="4096"/>
+                    </div>
+                    <div class="col-4 d-flex align-items-end">
+                        <button class="btn btn-warning w-100">Bellek ayır</button>
+                    </div>
+                </form>
+                <form asp-action="ReleaseMemory" method="post" class="mt-2">
+                    <button class="btn btn-outline-secondary">Belleği serbest bırak</button>
+                </form>
+                <p class="small text-muted mt-2 mb-0">
+                    <code>resources.limits.memory</code> aşıldığında Pod <em>OOMKilled</em> ile sonlanır.
+                    <code>kubectl describe pod</code> son satırında bunu görebilirsiniz.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,66 @@
+@{ ViewData["Title"] = "Storage / PVC"; }
+
+<h3>PVC (Kalıcı Depolama) Testi</h3>
+<p class="text-muted">
+    <code>@ViewBag.DataPath</code> dizinine dosya yaz, sonra Pod'u sil. Yeni Pod ayağa kalktığında
+    dosyalar duruyor mu? Eğer dizin <code>emptyDir</code> ise kaybolur,
+    <code>persistentVolumeClaim</code> ise korunur.
+</p>
+
+<div class="card shadow-sm mb-3">
+    <div class="card-body small">
+        <div>Dizin: <code>@ViewBag.DataPath</code></div>
+        <div>Var mı: <strong class="@(ViewBag.Exists ? "status-ok" : "status-bad")">@(ViewBag.Exists ? "EVET" : "HAYIR")</strong></div>
+        <div>Yazılabilir: <strong class="@(ViewBag.Writable ? "status-ok" : "status-bad")">@(ViewBag.Writable ? "EVET" : "HAYIR")</strong></div>
+        @if (ViewBag.TotalMb != null)
+        {
+            <div>Disk: @ViewBag.FreeMb MB boş / @ViewBag.TotalMb MB toplam</div>
+        }
+    </div>
+</div>
+
+<div class="card shadow-sm mb-3">
+    <div class="card-header">Yeni dosya yaz</div>
+    <div class="card-body">
+        <form asp-action="Write" method="post" class="row g-2">
+            <div class="col-md-4"><input class="form-control" name="name" placeholder="dosya-adi.txt (boş bırakılırsa otomatik)"/></div>
+            <div class="col-md-6"><input class="form-control" name="content" placeholder="içerik (boş bırakılırsa Pod adı ve tarih yazılır)"/></div>
+            <div class="col-md-2"><button class="btn btn-primary w-100">Yaz</button></div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header">Mevcut dosyalar</div>
+    <div class="card-body p-0">
+        @{ var files = (List<(string Name, long Size, DateTime Modified)>)ViewBag.Files; }
+        @if (files.Count == 0)
+        {
+            <div class="p-3 text-muted"><em>(boş)</em></div>
+        }
+        else
+        {
+            <table class="table table-sm mb-0">
+                <thead class="table-light">
+                    <tr><th>Ad</th><th>Boyut</th><th>Değiştirilme</th><th></th></tr>
+                </thead>
+                <tbody>
+                @foreach (var f in files)
+                {
+                    <tr>
+                        <td><code>@f.Name</code></td>
+                        <td>@f.Size B</td>
+                        <td>@f.Modified.ToString("yyyy-MM-dd HH:mm:ss") UTC</td>
+                        <td>
+                            <form asp-action="Delete" method="post" class="d-inline">
+                                <input type="hidden" name="name" value="@f.Name"/>
+                                <button class="btn btn-sm btn-outline-danger">Sil</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>

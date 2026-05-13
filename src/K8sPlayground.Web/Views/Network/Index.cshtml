@@ -1,0 +1,64 @@
+@{ ViewData["Title"] = "Network"; }
+
+<h3>Network / DNS / Headers</h3>
+<p class="text-muted">
+    Cluster içi servis çağırma, DNS sorgusu ve Ingress'in eklediği başlıkları
+    görmek için kullanın.
+</p>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header">Bu Pod</div>
+            <div class="card-body small">
+                <div>Host: <code>@ViewBag.Host</code></div>
+                <div>Pod IP: <code>@ViewBag.PodIp</code></div>
+                <div>Node: <code>@ViewBag.NodeName</code></div>
+                <div>Local IP'ler: <code>@string.Join(", ", (List<string>)ViewBag.Addresses)</code></div>
+                <div>Remote IP (istek geldiği): <code>@ViewBag.RemoteIp</code></div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mt-3">
+            <div class="card-header">DNS Çözümle</div>
+            <div class="card-body">
+                <form asp-action="Resolve" method="post" class="row g-2">
+                    <div class="col-9"><input class="form-control" name="host" placeholder="kubernetes.default.svc.cluster.local"/></div>
+                    <div class="col-3"><button class="btn btn-primary w-100">Çözümle</button></div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mt-3">
+            <div class="card-header">Service-to-Service HTTP GET</div>
+            <div class="card-body">
+                <form asp-action="Fetch" method="post" class="row g-2">
+                    <div class="col-9"><input class="form-control" name="url" placeholder="http://other-service.default.svc.cluster.local"/></div>
+                    <div class="col-3"><button class="btn btn-primary w-100">Fetch</button></div>
+                </form>
+                <p class="small text-muted mt-2 mb-0">
+                    NetworkPolicy demoları için: aynı namespace içindeki başka bir Service'i çağırın,
+                    sonra NetworkPolicy uygulayıp tekrar deneyin.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header">Gelen İstek Başlıkları</div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    @foreach (var (k, v) in (List<(string,string)>)ViewBag.Headers)
+                    {
+                        <tr><td><code>@k</code></td><td class="small"><code>@v</code></td></tr>
+                    }
+                </table>
+            </div>
+        </div>
+        <p class="small text-muted mt-2">
+            Ingress controller arkasında <code>X-Forwarded-For</code>,
+            <code>X-Forwarded-Proto</code>, <code>X-Real-IP</code> başlıklarını görmelisiniz.
+        </p>
+    </div>
+</div>
