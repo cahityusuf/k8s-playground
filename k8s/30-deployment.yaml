@@ -1,0 +1,176 @@
+# --------------------------------------------------------------------------
+# Ana Deployment.
+# Bu manifest aşağıdaki kavramları tek seferde gösterir:
+#   - imagePullPolicy, replicas
+#   - initContainer (Info sayfasındaki "init container işareti")
+#   - liveness / readiness / startup probe (3 ayrı endpoint)
+#   - downward API env (POD_NAME / POD_NAMESPACE / POD_IP / NODE_NAME ...)
+#   - envFrom ConfigMap & Secret
+#   - volumeMount ConfigMap, Secret, PVC, emptyDir
+#   - resources.requests/limits (HPA ve OOMKilled demosu için)
+#   - securityContext (non-root, readOnlyRootFilesystem)
+#   - terminationGracePeriodSeconds + lifecycle.preStop (graceful shutdown)
+# --------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: k8sp
+  namespace: k8s-playground
+  labels:
+    app.kubernetes.io/name: k8sp
+spec:
+  # PVC ReadWriteOnce olduğu için TEK replika kullanıyoruz; aksi hâlde
+  # ikinci Pod 'MultiAttachError' alır. Rolling update yerine 'Recreate':
+  # önce eski Pod (ve PVC bağlantısı) düşer, sonra yenisi ayağa kalkar.
+  replicas: 1
+  revisionHistoryLimit: 5
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: k8sp
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: k8sp
+        app.kubernetes.io/version: "1.0.0"
+      annotations:
+        # Prometheus scrape annotation'ları (Prometheus Operator ile ServiceMonitor da yazılabilir)
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "8080"
+    spec:
+      serviceAccountName: k8sp-sa
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+
+      # --- Init container: /data altına marker dosyası bırakır ---------------
+      initContainers:
+        - name: init-marker
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              echo "init container çalıştı"        >  /data/init-marker.txt
+              echo "node      = ${NODE_NAME}"      >> /data/init-marker.txt
+              echo "pod       = ${POD_NAME}"       >> /data/init-marker.txt
+              echo "namespace = ${POD_NAMESPACE}"  >> /data/init-marker.txt
+              echo "tarih     = $(date -u +%FT%TZ)" >> /data/init-marker.txt
+          env:
+            - name: NODE_NAME
+              valueFrom: { fieldRef: { fieldPath: spec.nodeName } }
+            - name: POD_NAME
+              valueFrom: { fieldRef: { fieldPath: metadata.name } }
+            - name: POD_NAMESPACE
+              valueFrom: { fieldRef: { fieldPath: metadata.namespace } }
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+
+      containers:
+        - name: web
+          image: docker.io/cahityusuf/k8s-playground:v1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+
+          # ---- Probe'lar (3 tip) ------------------------------------------
+          startupProbe:
+            httpGet: { path: /healthz/startup, port: http }
+            failureThreshold: 30      # 30 * 2s = 60 sn'ye kadar başlamasına izin ver
+            periodSeconds: 2
+          readinessProbe:
+            httpGet: { path: /healthz/ready, port: http }
+            periodSeconds: 5
+            failureThreshold: 2
+          livenessProbe:
+            httpGet: { path: /healthz/live, port: http }
+            periodSeconds: 10
+            failureThreshold: 3
+            timeoutSeconds: 2
+
+          # ---- Kaynak sınırları (HPA + OOMKilled demosu için) -------------
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+
+          # ---- Env: Downward API + ConfigMap + Secret ---------------------
+          env:
+            - name: APP_VERSION
+              value: "1.0.0"
+            - name: POD_NAME
+              valueFrom: { fieldRef: { fieldPath: metadata.name } }
+            - name: POD_NAMESPACE
+              valueFrom: { fieldRef: { fieldPath: metadata.namespace } }
+            - name: POD_IP
+              valueFrom: { fieldRef: { fieldPath: status.podIP } }
+            - name: POD_SERVICE_ACCOUNT
+              valueFrom: { fieldRef: { fieldPath: spec.serviceAccountName } }
+            - name: NODE_NAME
+              valueFrom: { fieldRef: { fieldPath: spec.nodeName } }
+            - name: NODE_IP
+              valueFrom: { fieldRef: { fieldPath: status.hostIP } }
+          envFrom:
+            - configMapRef: { name: k8sp-config }
+            - secretRef:    { name: k8sp-secret }
+
+          # ---- Mount'lar --------------------------------------------------
+          volumeMounts:
+            - name: cfg
+              mountPath: /etc/k8s-config
+              readOnly: true
+            - name: sec
+              mountPath: /etc/k8s-secret
+              readOnly: true
+            - name: data
+              mountPath: /data
+            - name: tmp
+              mountPath: /tmp
+
+          # ---- Graceful shutdown ------------------------------------------
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - sh
+                  - -c
+                  - sleep 5  # endpoints'ten düşene kadar trafik akışını bitir
+
+          # ---- Container-level security context ---------------------------
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true   # /tmp emptyDir ile mount edildiği için yazma sorunu olmaz
+            capabilities: { drop: ["ALL"] }
+
+      volumes:
+        - name: cfg
+          configMap:
+            name: k8sp-config
+        - name: sec
+          secret:
+            secretName: k8sp-secret
+            defaultMode: 0400
+        # /data → PVC. Init container'ın bıraktığı marker dosyası, /Storage
+        # sayfasından yazılan dosyalar ve /Storage/Upload ile yüklenen dosyalar
+        # burada saklanır. Pod silinse bile veriler korunur.
+        - name: data
+          persistentVolumeClaim:
+            claimName: k8sp-data
+        - name: tmp
+          emptyDir: {}

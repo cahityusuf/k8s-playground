@@ -1,0 +1,36 @@
+# Tüm manifestleri tek komutla uygulamak için kustomization.
+# Kullanım:
+#   kubectl apply -k k8s/
+# Belirli bir kaynağı geri almak için:
+#   kubectl delete -k k8s/
+#
+# NOT: NetworkPolicy ve ServiceMonitor opsiyoneldir. Kümenizde CNI'nın
+# NetworkPolicy desteği yoksa veya Prometheus Operator kurulu değilse
+# ilgili satırı bu listeden çıkarın.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: k8s-playground
+
+resources:
+  - 00-namespace.yaml
+  - 10-configmap.yaml
+  - 11-secret.yaml
+  - 20-pvc.yaml
+  - 25-serviceaccount.yaml
+  - 30-deployment.yaml             # replicas:1, Recreate, /data PVC mount, dosya upload aktif
+  - 40-service.yaml
+  - 50-ingress.yaml
+  # HPA ve PDB: Bu Deployment RWO PVC ile bağlı tek replika çalışır; HPA scale-up
+  # ikinci Pod'u kaldıramaz (MultiAttachError) ve PDB tek replika için anlamsızdır.
+  # PVC bağımlılığını kaldırırsanız (replicas>1) bu iki satırı açın.
+  # - 60-hpa.yaml
+  # - 61-pdb.yaml
+  # - 70-networkpolicy.yaml      # CNI NetworkPolicy desteklemiyorsa kapalı tutun
+  # - 80-servicemonitor.yaml     # Prometheus Operator yoksa kapalı tutun
+  # - 90-job-cronjob.yaml        # Job/CronJob demosunu istemiyorsanız kapalı tutun
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: k8s-playground
+    includeSelectors: false

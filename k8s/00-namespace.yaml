@@ -1,6 +1,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: playground
+  name: k8s-playground
   labels:
-    purpose: kubernetes-training
+    app.kubernetes.io/name: k8s-playground
+    app.kubernetes.io/part-of: kurs

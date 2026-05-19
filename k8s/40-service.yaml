@@ -1,0 +1,20 @@
+# ClusterIP servisi: cluster içinden 'http://k8sp.k8s-playground.svc.cluster.local'
+# adresiyle erişilir. Ingress arkasına bunu koyacağız. Aynı zamanda
+# readiness'i KAPATTIĞINIZDA endpoint listesinden Pod'un düştüğünü
+# 'kubectl get endpoints k8sp -n k8s-playground' ile gözlemleyebilirsiniz.
+apiVersion: v1
+kind: Service
+metadata:
+  name: k8sp
+  namespace: k8s-playground
+  labels:
+    app.kubernetes.io/name: k8sp
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: k8sp
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP

@@ -1,0 +1,11 @@
+# PDB: Drain/rolling update sırasında en fazla 1 Pod aşağı düşsün.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: k8sp
+  namespace: k8s-playground
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: k8sp

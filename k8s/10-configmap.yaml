@@ -1,0 +1,25 @@
+# ConfigMap, hem env (envFrom) hem volume mount örnekleri için kullanılır.
+# Volume olarak mount edildiğinde her anahtar /etc/k8s-config/<anahtar> dosyası olur.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: k8sp-config
+  namespace: k8s-playground
+data:
+  # envFrom ile env değişkenleri olarak enjekte edilenler
+  APP_DISPLAY_NAME: "Kubernetes Playground (CM ile)"
+  APP_FEATURE_X: "enabled"
+  APP_LOG_NAME: "k8s-playground"
+
+  # Volume olarak mount edildiğinde dosya gibi okunacaklar
+  greeting.txt: |
+    Merhaba kursiyer!
+    Bu metin ConfigMap'in 'greeting.txt' anahtarından geliyor.
+    Bu satırı 'kubectl edit configmap k8sp-config -n k8s-playground' ile
+    değiştirip /Config sayfasını yenileyerek otomatik güncellemeyi gözlemleyin
+    (kubelet ~30–60 sn içinde Pod içindeki dosyayı tazeler).
+  app.json: |
+    {
+      "feature": "demo",
+      "level": 2
+    }

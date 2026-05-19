@@ -1,15 +1,21 @@
-@{ ViewData["Title"] = "Storage / PVC"; }
+@{
+    ViewData["Title"] = "Storage / PVC";
+    var files   = (List<(string Name, long Size, DateTime Modified)>)ViewBag.Files;
+    var uploads = (List<(string Name, long Size, DateTime Modified)>)ViewBag.Uploads;
+    string Human(long b) => b < 1024 ? $"{b} B" : b < 1024 * 1024 ? $"{b / 1024.0:F1} KB" : $"{b / 1024.0 / 1024.0:F2} MB";
+}
 
 <h3>PVC (Kalıcı Depolama) Testi</h3>
 <p class="text-muted">
-    <code>@ViewBag.DataPath</code> dizinine dosya yaz, sonra Pod'u sil. Yeni Pod ayağa kalktığında
-    dosyalar duruyor mu? Eğer dizin <code>emptyDir</code> ise kaybolur,
-    <code>persistentVolumeClaim</code> ise korunur.
+    <code>@ViewBag.DataPath</code> dizinine dosya yaz veya yükle, sonra Pod'u sil.
+    Yeni Pod ayağa kalktığında dosyalar duruyor mu? <code>emptyDir</code> ile kaybolur,
+    <code>PersistentVolumeClaim</code> ile <strong>korunur</strong>.
 </p>
 
 <div class="card shadow-sm mb-3">
     <div class="card-body small">
         <div>Dizin: <code>@ViewBag.DataPath</code></div>
+        <div>Upload dizini: <code>@ViewBag.UploadsPath</code></div>
         <div>Var mı: <strong class="@(ViewBag.Exists ? "status-ok" : "status-bad")">@(ViewBag.Exists ? "EVET" : "HAYIR")</strong></div>
         <div>Yazılabilir: <strong class="@(ViewBag.Writable ? "status-ok" : "status-bad")">@(ViewBag.Writable ? "EVET" : "HAYIR")</strong></div>
         @if (ViewBag.TotalMb != null)
@@ -19,21 +25,47 @@
     </div>
 </div>
 
-<div class="card shadow-sm mb-3">
-    <div class="card-header">Yeni dosya yaz</div>
-    <div class="card-body">
-        <form asp-action="Write" method="post" class="row g-2">
-            <div class="col-md-4"><input class="form-control" name="name" placeholder="dosya-adi.txt (boş bırakılırsa otomatik)"/></div>
-            <div class="col-md-6"><input class="form-control" name="content" placeholder="içerik (boş bırakılırsa Pod adı ve tarih yazılır)"/></div>
-            <div class="col-md-2"><button class="btn btn-primary w-100">Yaz</button></div>
-        </form>
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header">📝 Metin dosyası yaz</div>
+            <div class="card-body">
+                <form asp-action="Write" method="post" class="row g-2">
+                    <div class="col-12"><input class="form-control" name="name" placeholder="dosya-adi.txt (boş bırakılırsa otomatik)"/></div>
+                    <div class="col-12"><input class="form-control" name="content" placeholder="içerik (boş bırakılırsa Pod adı ve tarih yazılır)"/></div>
+                    <div class="col-12"><button class="btn btn-primary w-100">Yaz</button></div>
+                </form>
+                <p class="small text-muted mb-0 mt-2">
+                    Dosya doğrudan <code>@ViewBag.DataPath</code> altına yazılır.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header">📤 Dosya yükle <span class="badge bg-light text-dark">max @ViewBag.MaxUploadMb MB</span></div>
+            <div class="card-body">
+                <form asp-action="Upload" method="post" enctype="multipart/form-data" class="row g-2">
+                    <div class="col-12">
+                        <input class="form-control" type="file" name="file" required />
+                    </div>
+                    <div class="col-12">
+                        <button class="btn btn-success w-100" type="submit">Yükle</button>
+                    </div>
+                </form>
+                <p class="small text-muted mb-0 mt-2">
+                    Dosya <code>@ViewBag.UploadsPath</code> altına kaydedilir. PVC mount edildiyse
+                    Pod silinse bile burada kalır.
+                </p>
+            </div>
+        </div>
     </div>
 </div>
 
-<div class="card shadow-sm">
-    <div class="card-header">Mevcut dosyalar</div>
+<div class="card shadow-sm mt-3">
+    <div class="card-header">📁 <code>@ViewBag.DataPath</code> içindeki dosyalar (kök)</div>
     <div class="card-body p-0">
-        @{ var files = (List<(string Name, long Size, DateTime Modified)>)ViewBag.Files; }
         @if (files.Count == 0)
         {
             <div class="p-3 text-muted"><em>(boş)</em></div>
@@ -41,18 +73,50 @@
         else
         {
             <table class="table table-sm mb-0">
-                <thead class="table-light">
-                    <tr><th>Ad</th><th>Boyut</th><th>Değiştirilme</th><th></th></tr>
-                </thead>
+                <thead class="table-light"><tr><th>Ad</th><th>Boyut</th><th>Değiştirilme (UTC)</th><th></th></tr></thead>
                 <tbody>
                 @foreach (var f in files)
                 {
                     <tr>
                         <td><code>@f.Name</code></td>
-                        <td>@f.Size B</td>
-                        <td>@f.Modified.ToString("yyyy-MM-dd HH:mm:ss") UTC</td>
-                        <td>
+                        <td>@Human(f.Size)</td>
+                        <td>@f.Modified.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                        <td class="text-end">
                             <form asp-action="Delete" method="post" class="d-inline">
+                                <input type="hidden" name="name" value="@f.Name"/>
+                                <button class="btn btn-sm btn-outline-danger">Sil</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+<div class="card shadow-sm mt-3">
+    <div class="card-header">📦 Yüklenen dosyalar — <code>@ViewBag.UploadsPath</code></div>
+    <div class="card-body p-0">
+        @if (uploads.Count == 0)
+        {
+            <div class="p-3 text-muted"><em>(henüz upload yok)</em></div>
+        }
+        else
+        {
+            <table class="table table-sm mb-0">
+                <thead class="table-light"><tr><th>Ad</th><th>Boyut</th><th>Yüklenme (UTC)</th><th></th></tr></thead>
+                <tbody>
+                @foreach (var f in uploads)
+                {
+                    <tr>
+                        <td><code>@f.Name</code></td>
+                        <td>@Human(f.Size)</td>
+                        <td>@f.Modified.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-primary" asp-action="Download" asp-route-name="@f.Name">İndir</a>
+                            <form asp-action="Delete" method="post" class="d-inline">
+                                <input type="hidden" name="folder" value="uploads"/>
                                 <input type="hidden" name="name" value="@f.Name"/>
                                 <button class="btn btn-sm btn-outline-danger">Sil</button>
                             </form>

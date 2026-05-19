@@ -17,6 +17,30 @@ public class LogsController : Controller
     public IActionResult Emit(string level = "Information", string message = "Merhaba K8s!", int count = 1)
     {
         count = Math.Clamp(count, 1, 1000);
+
+        // Eğitim için: kullanıcı 'Trace' veya 'Debug' seçtiğinde mevcut log filtresi
+        // bu seviyeyi yutuyorsa hiç log çıkmaz. Bunu sessizce yapmak yerine UI'da
+        // açıkça söyleyelim ki kursiyer "neden boş?" diye düşünmesin.
+        var mappedLevel = level switch
+        {
+            "Trace"       => LogLevel.Trace,
+            "Debug"       => LogLevel.Debug,
+            "Information" => LogLevel.Information,
+            "Warning"     => LogLevel.Warning,
+            "Error"       => LogLevel.Error,
+            "Critical"    => LogLevel.Critical,
+            _             => LogLevel.Information,
+        };
+
+        if (level != "StdErr" && !_log.IsEnabled(mappedLevel))
+        {
+            TempData["msg"] =
+                $"⚠ {level} seviyesi mevcut log filtresinde KAPALI — log üretilmedi. " +
+                $"appsettings.json içindeki Logging:LogLevel ayarını veya " +
+                $"ASPNETCORE_ENVIRONMENT=Development değişkenini değiştirerek açabilirsiniz.";
+            return RedirectToAction(nameof(Index));
+        }
+
         for (var i = 1; i <= count; i++)
         {
             switch (level)

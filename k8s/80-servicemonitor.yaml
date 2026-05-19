@@ -1,0 +1,17 @@
+# İsteğe bağlı: Prometheus Operator kurulu ise ServiceMonitor ile
+# /metrics endpoint'i toplanır.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: k8sp
+  namespace: k8s-playground
+  labels:
+    release: prometheus  # kube-prometheus-stack default release label'ı
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: k8sp
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s

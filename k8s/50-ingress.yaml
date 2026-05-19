@@ -1,0 +1,25 @@
+# NGINX Ingress üzerinden HTTP erişimi.
+# Sınıf adı kümenize göre değişebilir ('nginx', 'traefik' vs.).
+# 'kubectl get ingressclass' ile kontrol edin.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: k8sp
+  namespace: k8s-playground
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    # X-Forwarded-* başlıklarını /Network sayfasında görmek için
+    nginx.ingress.kubernetes.io/use-forwarded-headers: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: k8sp.local           # /etc/hosts'a ekleyin: <ingress-ip>  k8sp.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: k8sp
+                port:
+                  number: 80

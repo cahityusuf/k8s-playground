@@ -1,0 +1,45 @@
+# NetworkPolicy demosu.
+# Bu policy aktifken yalnızca aşağıdakiler izinli olur:
+#   1) Ingress controller namespace'inden gelen trafik (frontend trafiği)
+#   2) Aynı namespace içindeki diğer Pod'lardan gelen trafik (service-to-service)
+# Diğer her şey REDDEDİLİR.
+#
+# /Network sayfasından bir başka namespace'teki servise erişmeyi deneyin —
+# bu policy ile sonuç değişecektir. Önce policy'siz dene, sonra apply et,
+# farkı /Network sayfasından gözlemle.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: k8sp-default-deny-with-ingress
+  namespace: k8s-playground
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: k8sp
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    # DNS çözümlemesi
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Aynı namespace içinden başka servislere
+    - to:
+        - podSelector: {}
