@@ -1,15 +1,20 @@
 # --------------------------------------------------------------------------
-# Ana Deployment.
+# Ana Deployment (STATELESS — HPA testine uygun).
+#
 # Bu manifest aşağıdaki kavramları tek seferde gösterir:
-#   - imagePullPolicy, replicas
+#   - imagePullPolicy, replicas, RollingUpdate stratejisi
 #   - initContainer (Info sayfasındaki "init container işareti")
 #   - liveness / readiness / startup probe (3 ayrı endpoint)
 #   - downward API env (POD_NAME / POD_NAMESPACE / POD_IP / NODE_NAME ...)
 #   - envFrom ConfigMap & Secret
-#   - volumeMount ConfigMap, Secret, PVC, emptyDir
+#   - volumeMount ConfigMap, Secret, emptyDir
 #   - resources.requests/limits (HPA ve OOMKilled demosu için)
 #   - securityContext (non-root, readOnlyRootFilesystem)
 #   - terminationGracePeriodSeconds + lifecycle.preStop (graceful shutdown)
+#
+# /data dizini emptyDir ile mount edilir → her Pod kendi izole alanına yazar,
+# Pod silindiğinde içerik kaybolur. Kalıcı disk gereken senaryolar için bkz.
+# kubernetes-101-workshop/labs/07-volume-pvc örneği.
 # --------------------------------------------------------------------------
 apiVersion: apps/v1
 kind: Deployment
@@ -19,13 +24,16 @@ metadata:
   labels:
     app.kubernetes.io/name: k8sp
 spec:
-  # PVC ReadWriteOnce olduğu için TEK replika kullanıyoruz; aksi hâlde
-  # ikinci Pod 'MultiAttachError' alır. Rolling update yerine 'Recreate':
-  # önce eski Pod (ve PVC bağlantısı) düşer, sonra yenisi ayağa kalkar.
-  replicas: 1
+  # 2 replika ile başlıyoruz → Service load-balancing ve HPA scale-up için ideal.
+  # HPA aktif olduğunda bu değer HPA tarafından yönetilir; manifest'te sabit
+  # tutmak HPA ile çakışmaz çünkü HPA 'replicas' alanını kendi yazar.
+  replicas: 2
   revisionHistoryLimit: 5
   strategy:
-    type: Recreate
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       app.kubernetes.io/name: k8sp
@@ -33,7 +41,7 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: k8sp
-        app.kubernetes.io/version: "1.0.0"
+        app.kubernetes.io/version: "1.0.1"
       annotations:
         # Prometheus scrape annotation'ları (Prometheus Operator ile ServiceMonitor da yazılabilir)
         prometheus.io/scrape: "true"
@@ -79,8 +87,11 @@ spec:
 
       containers:
         - name: web
-          image: docker.io/cahityusuf/k8s-playground:v1.0.0
-          imagePullPolicy: IfNotPresent
+          image: docker.io/cahityusuf/k8s-playground:v1.0.1
+          # Eğitim sırasında aynı tag'i çok kez güncelliyoruz; Always politikası
+          # node'da cache kalan eski imajı atlatır. Üretimde 'IfNotPresent' +
+          # immutable tag'ler (örn. sürüm numarası ya da digest pin) tercih edilir.
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 8080
@@ -113,7 +124,7 @@ spec:
           # ---- Env: Downward API + ConfigMap + Secret ---------------------
           env:
             - name: APP_VERSION
-              value: "1.0.0"
+              value: "1.0.1"
             - name: POD_NAME
               valueFrom: { fieldRef: { fieldPath: metadata.name } }
             - name: POD_NAMESPACE
@@ -166,11 +177,11 @@ spec:
           secret:
             secretName: k8sp-secret
             defaultMode: 0400
-        # /data → PVC. Init container'ın bıraktığı marker dosyası, /Storage
-        # sayfasından yazılan dosyalar ve /Storage/Upload ile yüklenen dosyalar
-        # burada saklanır. Pod silinse bile veriler korunur.
+        # /data → emptyDir. Her Pod kendi izole alanına yazar; Pod silindiğinde
+        # içerik kaybolur. Bu, HPA ile birden çok replikanın aynı anda çalışmasına
+        # izin verir (RWO PVC olsaydı MultiAttachError olurdu). Kalıcı disk
+        # demosu için bkz. kubernetes-101-workshop/labs/07-volume-pvc.
         - name: data
-          persistentVolumeClaim:
-            claimName: k8sp-data
+          emptyDir: {}
         - name: tmp
           emptyDir: {}

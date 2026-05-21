@@ -1,9 +1,27 @@
-# HPA (autoscaling/v2). Metrics Server kümenizde KURULU olmalıdır.
-#   kubectl top pod -n k8s-playground   <-- bu çalışmıyorsa metrics-server kurun
+# HorizontalPodAutoscaler (autoscaling/v2)
+# ----------------------------------------------------------------------------
+# ÖNŞART: Kümede 'metrics-server' kurulu olmalı. Kontrol:
+#   kubectl top pod -n k8s-playground
+# Çıktı alıyorsanız hazırsınız. 'error: Metrics API not available' alıyorsanız:
+#   https://github.com/kubernetes-sigs/metrics-server  →  components.yaml uygulayın.
 #
-# Demo:
-#   /Stress sayfasından "20 sn × 2 worker" CPU yakın, replika sayısının
-#   2 -> 4 -> ... arttığını izleyin: kubectl get hpa,pods -n k8s-playground -w
+# HPA hesabı (CPU):
+#   - Container request:  cpu: 100m  (Deployment'ta)
+#   - HPA hedefi:         %60
+#   - Trigger eşiği:      ortalama 60m üstü CPU kullanımı → scale-up
+#   - Her Pod ~120m üretirse "1 Pod yetmedi" → 2 Pod → eşitlenirse 3-4 Pod ...
+#
+# Demo akışı (3-5 dakika):
+#   1) İki terminal aç:
+#        kubectl -n k8s-playground get hpa k8sp -w
+#        kubectl -n k8s-playground get pod -l app.kubernetes.io/name=k8sp -w
+#   2) /Stress sayfasından "120 sn × 2 worker" CPU yakın
+#      (veya birden fazla sekme açın — Service zaten round-robin dağıtır).
+#   3) 60-90 sn içinde 'TARGETS' değeri yükselir, ardından replikalar 2 → 4 → 6 → ...
+#   4) Yük bittikten ~120 sn sonra (scaleDown.stabilizationWindow) tekrar 2'ye iner.
+#
+# NOT: HPA replikaları yönetir; Deployment manifest'indeki 'replicas: 2' değeri
+# sadece ilk apply'da kullanılır, sonrasında HPA yazar. Bu yüzden ikisi çakışmaz.
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:

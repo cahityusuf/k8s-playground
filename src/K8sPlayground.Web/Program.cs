@@ -5,9 +5,11 @@ var builder = WebApplication.CreateBuilder(args);
 // MVC
 builder.Services.AddControllersWithViews();
 
-// Singleton durumlar: readiness toggle ve memory ballast
+// Singleton durumlar: readiness toggle, memory ballast ve arka plan CPU yükü.
+// BackgroundLoad uygulama kapanırken Dispose ile worker thread'lerini bırakır.
 builder.Services.AddSingleton<ReadinessState>();
 builder.Services.AddSingleton<MemoryBallast>();
+builder.Services.AddSingleton<BackgroundLoad>();
 
 // Kubernetes ortam değişkenleri (downward API ile gelir)
 builder.Services.Configure<HostOptions>(o =>
@@ -36,7 +38,7 @@ app.MapGet("/healthz/startup", () =>
     Results.Ok(new { status = "started" }));
 
 // Prometheus benzeri basit metrik endpoint'i (eğitim amaçlı)
-app.MapGet("/metrics", (ReadinessState state, MemoryBallast ballast) =>
+app.MapGet("/metrics", (ReadinessState state, MemoryBallast ballast, BackgroundLoad load) =>
 {
     var proc = System.Diagnostics.Process.GetCurrentProcess();
     var lines = new[]
@@ -50,6 +52,12 @@ app.MapGet("/metrics", (ReadinessState state, MemoryBallast ballast) =>
         "# HELP app_ballast_bytes Ballast bytes intentionally allocated",
         "# TYPE app_ballast_bytes gauge",
         $"app_ballast_bytes {ballast.AllocatedBytes}",
+        "# HELP app_load_workers Currently running background CPU burner threads",
+        "# TYPE app_load_workers gauge",
+        $"app_load_workers {load.ActiveWorkers}",
+        "# HELP app_load_seconds_total Cumulative seconds of background CPU load produced since startup",
+        "# TYPE app_load_seconds_total counter",
+        $"app_load_seconds_total {load.TotalLoadSeconds:F3}",
     };
     return Results.Text(string.Join("\n", lines) + "\n", "text/plain");
 });

@@ -16,16 +16,13 @@ resources:
   - 00-namespace.yaml
   - 10-configmap.yaml
   - 11-secret.yaml
-  - 20-pvc.yaml
   - 25-serviceaccount.yaml
-  - 30-deployment.yaml             # replicas:1, Recreate, /data PVC mount, dosya upload aktif
+  - 30-deployment.yaml             # stateless: replicas:2, RollingUpdate, /data emptyDir
   - 40-service.yaml
   - 50-ingress.yaml
-  # HPA ve PDB: Bu Deployment RWO PVC ile bağlı tek replika çalışır; HPA scale-up
-  # ikinci Pod'u kaldıramaz (MultiAttachError) ve PDB tek replika için anlamsızdır.
-  # PVC bağımlılığını kaldırırsanız (replicas>1) bu iki satırı açın.
-  # - 60-hpa.yaml
-  # - 61-pdb.yaml
+  - 60-hpa.yaml                    # HPA aktif — /Stress sayfasından scale-up'ı tetikleyebilirsiniz
+  - 61-pdb.yaml                    # 2+ replika için PDB anlamlı (drain sırasında 1 Pod hep ayakta)
+  # Aşağıdaki satırları kümeniz destekliyorsa açabilirsiniz.
   # - 70-networkpolicy.yaml      # CNI NetworkPolicy desteklemiyorsa kapalı tutun
   # - 80-servicemonitor.yaml     # Prometheus Operator yoksa kapalı tutun
   # - 90-job-cronjob.yaml        # Job/CronJob demosunu istemiyorsanız kapalı tutun

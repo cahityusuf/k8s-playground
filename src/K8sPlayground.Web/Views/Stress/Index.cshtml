@@ -1,4 +1,11 @@
-@{ ViewData["Title"] = "Stres"; }
+@{
+    ViewData["Title"] = "Stres";
+    var loadWorkers = (int)(ViewBag.LoadWorkers ?? 0);
+    var loadActive = loadWorkers > 0;
+    var loadStartedAt = (DateTime?)ViewBag.LoadStartedAtUtc;
+    var loadTotalSec = (double)(ViewBag.LoadTotalSeconds ?? 0.0);
+    var hostCpu = (int)(ViewBag.HostCpuCount ?? 1);
+}
 
 <h3>CPU / Memory Stres Testi</h3>
 <p class="text-muted">
@@ -6,10 +13,102 @@
     senaryolarını canlı demo etmek için kullanılır.
 </p>
 
+@if (TempData["msg"] is string msg)
+{
+    <div class="alert alert-info py-2 small">@msg</div>
+}
+
+<!-- ======================================================================
+     SÜREKLİ ARKA PLAN CPU YÜKÜ — HPA scale-up demosu için
+     ====================================================================== -->
+<div class="card shadow-sm mb-3 @(loadActive ? "border-success" : "")">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>
+            <strong>Sürekli CPU Yükü (HPA Tetikleyici)</strong>
+            @if (loadActive)
+            {
+                <span class="badge bg-success ms-2">Çalışıyor — @loadWorkers worker</span>
+            }
+            else
+            {
+                <span class="badge bg-secondary ms-2">Durdu</span>
+            }
+        </span>
+        <span class="small text-muted">
+            host CPU: @hostCpu | toplam üretilen yük: @loadTotalSec.ToString("F1") sn
+        </span>
+    </div>
+    <div class="card-body">
+        <p class="small text-muted mb-3">
+            Bu yükü <em>başlatana kadar</em> çalışmaya devam eder ve HPA scale-up'ı
+            tetiklemeye yetecek kadar uzun sürer (60-180 sn stabilization window).
+            Aşağıdaki <code>kubectl</code> komutu ile replika sayısının arttığını
+            canlı izleyebilirsiniz:
+        </p>
+        <pre class="bg-light p-2 small mb-3"><code>kubectl -n k8s-playground get hpa,pods -w</code></pre>
+
+        <div class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <form asp-action="StartLoad" method="post" class="d-flex gap-2">
+                    <div class="flex-grow-1">
+                        <label class="form-label small mb-1">Worker sayısı</label>
+                        <input class="form-control" type="number" name="workers"
+                               value="@(loadActive ? loadWorkers : 2)" min="1" max="@(hostCpu * 2)" />
+                    </div>
+                </form>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <form asp-action="StartLoad" method="post" class="flex-grow-1">
+                    <input type="hidden" name="workers" id="workersHidden" value="2" />
+                    <button class="btn btn-success w-100" type="submit">
+                        @(loadActive ? "Yeniden Başlat" : "Başlat")
+                    </button>
+                </form>
+                <form asp-action="StopLoad" method="post" class="flex-grow-1">
+                    <button class="btn btn-outline-danger w-100" type="submit" @(loadActive ? "" : "disabled")>
+                        Durdur
+                    </button>
+                </form>
+            </div>
+            <div class="col-md-6">
+                @if (loadActive && loadStartedAt is not null)
+                {
+                    <div class="small">
+                        <strong>Başlangıç:</strong> @loadStartedAt.Value.ToString("yyyy-MM-dd HH:mm:ss") UTC<br/>
+                        <strong>Geçen süre:</strong> @((int)(DateTime.UtcNow - loadStartedAt.Value).TotalSeconds) sn<br/>
+                        <strong>Aktif worker:</strong> @loadWorkers thread (priority: BelowNormal)
+                    </div>
+                }
+                else
+                {
+                    <div class="small text-muted">
+                        <strong>İpucu:</strong> 2 worker, mevcut <code>requests.cpu: 100m</code>
+                        ve <code>limits.cpu: 500m</code> ile container'ı tavanına yaklaştırır;
+                        HPA hedefi (%60 = 60m) kolayca aşılır.
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (loadActive)
+{
+    <div class="alert alert-warning small">
+        Sayfa otomatik yenilenmiyor — 5 saniyede bir yenileyerek
+        <code>kubectl top pod -n k8s-playground</code> ile karşılaştırın.
+        Veya <code>watch -n2 'kubectl -n k8s-playground get hpa,pods'</code>
+        kullanın.
+    </div>
+}
+
+<!-- ======================================================================
+     TEK SEFERLİK CPU + MEMORY (mevcut testler)
+     ====================================================================== -->
 <div class="row g-3">
     <div class="col-md-6">
         <div class="card shadow-sm">
-            <div class="card-header">CPU Yükü</div>
+            <div class="card-header">Tek Seferlik CPU Yükü <span class="small text-muted">(maks 120 sn)</span></div>
             <div class="card-body">
                 <form asp-action="Cpu" method="post" class="row g-2">
                     <div class="col-6">
@@ -21,18 +120,24 @@
                         <input class="form-control" type="number" name="workers" value="2" min="1" max="16"/>
                     </div>
                     <div class="col-12">
-                        <button class="btn btn-danger">CPU yak</button>
+                        <button class="btn btn-danger">CPU yak (tek seferlik)</button>
                     </div>
                 </form>
                 <p class="small text-muted mt-2 mb-0">
-                    <code>kubectl top pod</code> ile CPU kullanımını izleyin; HPA varsa replika sayısının arttığını gözlemleyin.
+                    Süre dolunca yük otomatik biter. HPA stabilization window'una
+                    yetmezse <strong>üstteki "Sürekli CPU Yükü"</strong> kartını kullanın.
                 </p>
             </div>
         </div>
     </div>
     <div class="col-md-6">
         <div class="card shadow-sm">
-            <div class="card-header">Bellek Yükü <span class="badge bg-light text-dark">Şu an: @ViewBag.MemMb MB ballast / @ViewBag.WorkingSetMb MB working set</span></div>
+            <div class="card-header">
+                Bellek Yükü
+                <span class="badge bg-light text-dark">
+                    Şu an: @ViewBag.MemMb MB ballast / @ViewBag.WorkingSetMb MB working set
+                </span>
+            </div>
             <div class="card-body">
                 <form asp-action="Memory" method="post" class="row g-2">
                     <div class="col-8">
